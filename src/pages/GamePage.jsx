@@ -19,8 +19,12 @@ function GamePage({ mode }) {
   } = useGame();
 
   useEffect(() => {
+    if (status === "playing" && config.mode === mode) {
+      return;
+    }
     startGame(mode);
-  }, [mode, startGame]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   const pageConfig = GAME_MODE_CONFIGS[mode];
 

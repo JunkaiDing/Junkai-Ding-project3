@@ -56,6 +56,47 @@ function getGivenCount(config) {
   return config.givens;
 }
 
+function getValidValues(board, row, column, config) {
+  const used = new Set();
+
+  for (let c = 0; c < config.size; c++) {
+    if (board[row][c]) used.add(board[row][c]);
+  }
+  for (let r = 0; r < config.size; r++) {
+    if (board[r][column]) used.add(board[r][column]);
+  }
+
+  const startRow = Math.floor(row / config.subRows) * config.subRows;
+  const startCol = Math.floor(column / config.subCols) * config.subCols;
+  for (let r = startRow; r < startRow + config.subRows; r++) {
+    for (let c = startCol; c < startCol + config.subCols; c++) {
+      if (board[r][c]) used.add(board[r][c]);
+    }
+  }
+
+  return range(config.maxValue).map((i) => i + 1).filter((v) => !used.has(v));
+}
+
+// Counts solutions up to `limit` using backtracking (modifies board in place).
+// Returns early once count reaches limit to avoid unnecessary work.
+function countSolutions(board, config, limit = 2) {
+  for (let r = 0; r < config.size; r++) {
+    for (let c = 0; c < config.size; c++) {
+      if (board[r][c] === 0) {
+        let count = 0;
+        for (const value of getValidValues(board, r, c, config)) {
+          board[r][c] = value;
+          count += countSolutions(board, config, limit - count);
+          board[r][c] = 0;
+          if (count >= limit) return count;
+        }
+        return count;
+      }
+    }
+  }
+  return 1;
+}
+
 export function createPuzzle(solution, config) {
   const puzzle = cloneBoard(solution);
   const positions = shuffle(
@@ -66,10 +107,21 @@ export function createPuzzle(solution, config) {
   );
   const givens = getGivenCount(config);
   const cellsToClear = config.size * config.size - givens;
+  let cleared = 0;
 
-  positions.slice(0, cellsToClear).forEach(({ row, column }) => {
+  for (const { row, column } of positions) {
+    if (cleared >= cellsToClear) break;
+
+    const savedValue = puzzle[row][column];
     puzzle[row][column] = 0;
-  });
+
+    // Only keep the cell empty if the puzzle still has exactly one solution
+    if (countSolutions(cloneBoard(puzzle), config) === 1) {
+      cleared++;
+    } else {
+      puzzle[row][column] = savedValue;
+    }
+  }
 
   return puzzle;
 }
