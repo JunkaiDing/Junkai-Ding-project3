@@ -1,0 +1,31 @@
+{
+  "name": "sudoku-project",
+  "version": "1.0.0",
+  "description": "*   **Github Pages:** https://junkaiding.github.io/sudoku-project/ *   **Collaborators:** Xihe Mu，Junkai Ding,  Chengyu Liang *   **Github Repo:** https://github.com/JunkaiDing/sudoku-project *   **Video Walkthrough:** https://youtu.be/4U8iNQYsOWY",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JunkaiDing/sudoku-project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JunkaiDing/sudoku-project/issues"
+  },
+  "homepage": "https://github.com/JunkaiDing/sudoku-project#readme",
+  "type": "module",
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.0",
+    "vite": "^8.0.0"
+  }
+}

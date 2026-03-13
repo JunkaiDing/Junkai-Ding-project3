@@ -1,87 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sudoku Master - Home</title>
-    <link rel="stylesheet" href="common.css">
-    <style>
-        .hero {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 80vh;
-            text-align: center;
-            background: radial-gradient(circle at center, rgba(86, 204, 242, 0.1) 0%, rgba(255,255,255,0) 70%);
-        }
-        
-        .hero-icon {
-            font-size: 5rem;
-            margin-bottom: 1rem;
-            color: var(--primary-color);
-        }
-
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
-            width: 100%;
-        }
-
-        .feature-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            text-align: left;
-        }
-
-        .feature-card h3 {
-            color: var(--primary-color);
-            margin-bottom: 0.5rem;
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar">
-        <div class="nav-brand">Sudoku Master</div>
-        <ul class="nav-links">
-            <li><a href="index.html" class="active">Home</a></li>
-            <li><a href="selection/index.html">Play</a></li>
-            <li><a href="rules/index.html">Rules</a></li>
-            <li><a href="highscores/index.html">Scores</a></li>
-            <li><a href="login/index.html">Login</a></li>
-        </ul>
-    </nav>
-
-    <div class="container">
-        <section class="hero">
-            <div class="hero-icon">🧩</div>
-            <h1>Welcome to Sudoku Master</h1>
-            <p class="mb-2" style="font-size: 1.2rem; max-width: 600px;">
-                Challenge your mind with the classic puzzle game. 
-                Test your logic, beat your high scores, and become a Sudoku Master.
-            </p>
-            <a href="selection/index.html" class="btn">Start Playing</a>
-
-            <div class="features">
-                <div class="feature-card">
-                    <h3>Classic Gameplay</h3>
-                    <p>Enjoy the traditional 9x9 grid or try the easier 6x6 variant for a quick game.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>Track Progress</h3>
-                    <p>Log in to save your high scores and compete with other players.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>Mobile Friendly</h3>
-                    <p>Play on the go with our fully responsive design optimized for mobile devices.</p>
-                </div>
-            </div>
-        </section>
-    </div>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sudoku Master</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
 
