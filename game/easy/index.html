@@ -90,6 +90,58 @@
                 font-size: 1.2rem;
             }
         }
+
+        .cell.invalid {
+            background-color: #ffe0e0;
+            color: #c0392b;
+        }
+
+        .cell.invalid.fixed {
+            background-color: #ffc0c0;
+        }
+
+        .cell.hint {
+            background-color: #fffbe6;
+            box-shadow: inset 0 0 0 3px #f2c94c;
+        }
+
+        .win-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .win-overlay.visible {
+            display: flex;
+        }
+
+        .win-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 2.5rem 3rem;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+        }
+
+        .win-card h2 {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .win-card p {
+            font-size: 1.2rem;
+            color: #555;
+            margin-bottom: 1.5rem;
+        }
+
+        .win-card .btn {
+            margin: 0 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -108,7 +160,7 @@
         <div class="game-container">
             <div class="game-header">
                 <h2>Easy Level</h2>
-                <div class="timer">02:15</div>
+                <div class="timer" id="timer">00:00</div>
             </div>
 
             <div class="sudoku-grid">
@@ -152,10 +204,272 @@
 
             <div class="game-controls">
                 <a href="../../selection/index.html" class="btn btn-secondary">Quit</a>
-                <button class="btn">New Game</button>
+                <button class="btn btn-secondary" id="hint-btn">Hint</button>
+                <button class="btn" id="reset-btn">New Game</button>
             </div>
         </div>
     </div>
+
+    <div class="win-overlay" id="win-overlay">
+        <div class="win-card">
+            <h2>Congratulations!</h2>
+            <p id="win-time">Completed in 00:00</p>
+            <button class="btn" id="win-reset-btn">Play Again</button>
+            <a href="../../selection/index.html" class="btn btn-secondary">Back</a>
+        </div>
+    </div>
+
+    <script>
+        const SUBROWS = 2, SUBCOLS = 3, SIZE = 6;
+
+        // ================================================================
+        // 1. 回溯算法：确保棋盘唯一解
+        // ================================================================
+
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // 获取 (r,c) 处所有合法值（不与同行/列/宫格冲突）
+        function getValidValues(board, r, c) {
+            const used = new Set();
+            for (let cc = 0; cc < SIZE; cc++) if (board[r][cc]) used.add(board[r][cc]);
+            for (let rr = 0; rr < SIZE; rr++) if (board[rr][c]) used.add(board[rr][c]);
+            const sr = Math.floor(r / SUBROWS) * SUBROWS;
+            const sc = Math.floor(c / SUBCOLS) * SUBCOLS;
+            for (let br = sr; br < sr + SUBROWS; br++)
+                for (let bc = sc; bc < sc + SUBCOLS; bc++)
+                    if (board[br][bc]) used.add(board[br][bc]);
+            return Array.from({ length: SIZE }, (_, i) => i + 1).filter(v => !used.has(v));
+        }
+
+        // 回溯计数：统计解的个数，达到 limit 时提前终止
+        // 对应 sudoku.js 的 countSolutions()
+        function countSolutions(board, limit = 2) {
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (board[r][c] === 0) {
+                        let count = 0;
+                        for (const v of getValidValues(board, r, c)) {
+                            board[r][c] = v;
+                            count += countSolutions(board, limit - count);
+                            board[r][c] = 0;
+                            if (count >= limit) return count;
+                        }
+                        return count; // 当前空格无合法值 → 死路
+                    }
+                }
+            }
+            return 1; // 所有格都填满 → 找到一个解
+        }
+
+        // 用随机排列构造合法的完整解盘（对应 sudoku.js 的 createSolvedBoard）
+        function createSolvedBoard() {
+            const digits = shuffle([1, 2, 3, 4, 5, 6]);
+            function shuffledGroup(size, groupSize) {
+                const groups = size / groupSize;
+                return shuffle(Array.from({ length: groups }, (_, i) => i))
+                    .flatMap(g => shuffle(Array.from({ length: groupSize }, (_, i) => g * groupSize + i)));
+            }
+            const rows = shuffledGroup(SIZE, SUBROWS);
+            const cols = shuffledGroup(SIZE, SUBCOLS);
+            return rows.map(r => cols.map(c =>
+                digits[(SUBCOLS * (r % SUBROWS) + Math.floor(r / SUBROWS) + c) % SIZE]
+            ));
+        }
+
+        // 从完整解盘中随机挖空，每次挖空前用回溯验证仍保持唯一解
+        // maxRemove 控制最多挖空多少格（easy 模式挖 18 格，保留一半提示）
+        // 对应 sudoku.js 的 createPuzzle()
+        function createPuzzle(solution, maxRemove = 18) {
+            const puzzle = solution.map(row => [...row]);
+            const positions = shuffle(Array.from({ length: SIZE * SIZE }, (_, i) => i));
+            let removed = 0;
+            for (const pos of positions) {
+                if (removed >= maxRemove) break;
+                const r = Math.floor(pos / SIZE), c = pos % SIZE;
+                const saved = puzzle[r][c];
+                puzzle[r][c] = 0;
+                // 传入副本：countSolutions 会原地回溯，保护 puzzle 不被修改
+                if (countSolutions(puzzle.map(row => [...row])) !== 1) {
+                    puzzle[r][c] = saved; // 移除该格会导致多解，恢复
+                } else {
+                    removed++;
+                }
+            }
+            return puzzle;
+        }
+
+        // ================================================================
+        // 2. 状态 & DOM
+        // ================================================================
+
+        let initialBoard = [];
+        let elapsedSeconds = 0;
+        let timerId = null;
+        let status = 'playing';
+        let hintIdx = -1;
+
+        const cells = Array.from(document.querySelectorAll('.cell'));
+        const timerEl = document.getElementById('timer');
+        const winOverlay = document.getElementById('win-overlay');
+        const winTimeEl = document.getElementById('win-time');
+
+        // ================================================================
+        // 3. 计时器
+        // ================================================================
+
+        function formatTime(s) {
+            return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+        }
+        function startTimer() {
+            if (timerId !== null) return;
+            timerId = setInterval(() => {
+                if (status !== 'playing') return;
+                timerEl.textContent = formatTime(++elapsedSeconds);
+            }, 1000);
+        }
+        function stopTimer() { clearInterval(timerId); timerId = null; }
+
+        // ================================================================
+        // 4. 读取 & 验证棋盘
+        // ================================================================
+
+        function getBoard() {
+            return Array.from({ length: SIZE }, (_, r) =>
+                Array.from({ length: SIZE }, (_, c) => parseInt(cells[r * SIZE + c].value) || 0)
+            );
+        }
+
+        function isBoardComplete(board) {
+            return board.every(row => row.every(v => v !== 0));
+        }
+
+        function getInvalidKeys(board) {
+            const invalid = new Set();
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const v = board[r][c];
+                    if (!v) continue;
+                    for (let cc = 0; cc < SIZE; cc++)
+                        if (cc !== c && board[r][cc] === v) { invalid.add(`${r}-${c}`); invalid.add(`${r}-${cc}`); }
+                    for (let rr = 0; rr < SIZE; rr++)
+                        if (rr !== r && board[rr][c] === v) { invalid.add(`${r}-${c}`); invalid.add(`${rr}-${c}`); }
+                    const sr = Math.floor(r / SUBROWS) * SUBROWS;
+                    const sc = Math.floor(c / SUBCOLS) * SUBCOLS;
+                    for (let br = sr; br < sr + SUBROWS; br++)
+                        for (let bc = sc; bc < sc + SUBCOLS; bc++)
+                            if ((br !== r || bc !== c) && board[br][bc] === v) {
+                                invalid.add(`${r}-${c}`); invalid.add(`${br}-${bc}`);
+                            }
+                }
+            }
+            return invalid;
+        }
+
+        function checkWin() {
+            const board = getBoard();
+            const invalid = getInvalidKeys(board);
+            cells.forEach((cell, i) =>
+                cell.classList.toggle('invalid', invalid.has(`${Math.floor(i / SIZE)}-${i % SIZE}`))
+            );
+            if (invalid.size === 0 && isBoardComplete(board)) {
+                status = 'won';
+                stopTimer();
+                winTimeEl.textContent = `Completed in ${formatTime(elapsedSeconds)}`;
+                winOverlay.classList.add('visible');
+            }
+        }
+
+        // ================================================================
+        // 5. Hint：找到一个只有唯一合法值的空格并高亮
+        // ================================================================
+
+        function clearHint() {
+            if (hintIdx >= 0) { cells[hintIdx].classList.remove('hint'); hintIdx = -1; }
+        }
+
+        function showHint() {
+            clearHint();
+            const board = getBoard();
+            const candidates = [];
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (board[r][c] === 0) {
+                        // 只有一个合法值 → 该格是"裸单元"，提示它
+                        if (getValidValues(board, r, c).length === 1) {
+                            candidates.push(r * SIZE + c);
+                        }
+                    }
+                }
+            }
+            if (candidates.length === 0) {
+                alert('No single-answer cell found right now.\nTry resolving conflicts first.');
+                return;
+            }
+            // 随机选一个（避免每次都提示同一格）
+            hintIdx = candidates[Math.floor(Math.random() * candidates.length)];
+            cells[hintIdx].classList.add('hint');
+            cells[hintIdx].focus();
+        }
+
+        // ================================================================
+        // 6. 渲染 & 新局/重置
+        // ================================================================
+
+        function renderBoard(board) {
+            cells.forEach((cell, i) => {
+                const r = Math.floor(i / SIZE), c = i % SIZE;
+                const isFixed = initialBoard[r][c] !== 0;
+                cell.readOnly = isFixed;
+                cell.classList.toggle('fixed', isFixed);
+                cell.value = board[r][c] || '';
+                cell.type = isFixed ? 'number' : 'text';
+                if (!isFixed) { cell.maxLength = 1; cell.inputMode = 'numeric'; }
+                cell.classList.remove('invalid', 'hint');
+            });
+        }
+
+        function startNewGame() {
+            stopTimer();
+            status = 'playing';
+            elapsedSeconds = 0;
+            hintIdx = -1;
+            timerEl.textContent = '00:00';
+            winOverlay.classList.remove('visible');
+            initialBoard = createPuzzle(createSolvedBoard());
+            renderBoard(initialBoard);
+            startTimer();
+        }
+
+        // ================================================================
+        // 7. 事件绑定
+        // ================================================================
+
+        cells.forEach(cell => {
+            cell.addEventListener('keydown', e => {
+                if (cell.readOnly) return;
+                clearHint();
+                if (e.key === 'Backspace' || e.key === 'Delete') {
+                    e.preventDefault(); cell.value = ''; checkWin(); return;
+                }
+                if (['Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+                e.preventDefault();
+                if (e.key >= '1' && e.key <= '6') { cell.value = e.key; checkWin(); }
+            });
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', startNewGame);
+        document.getElementById('win-reset-btn').addEventListener('click', startNewGame);
+        document.getElementById('hint-btn').addEventListener('click', showHint);
+
+        startNewGame();
+    </script>
 </body>
 </html>
 

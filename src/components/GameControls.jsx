@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-function GameControls({ onNewGame, onReset, modeLabel }) {
+function GameControls({ onNewGame, onReset, onHint, modeLabel }) {
   return (
     <div className="game-controls">
       <Link to="/games" className="btn btn-secondary">
@@ -8,6 +8,9 @@ function GameControls({ onNewGame, onReset, modeLabel }) {
       </Link>
       <button type="button" className="btn btn-secondary" onClick={onReset}>
         Reset
+      </button>
+      <button type="button" className="btn btn-secondary" onClick={onHint}>
+        Hint
       </button>
       <button type="button" className="btn" onClick={onNewGame}>
         New {modeLabel} Game

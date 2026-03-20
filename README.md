@@ -29,8 +29,11 @@ This assignment took approximately 15 hours across the three of us to complete.
 
 ### What bonus points did you accomplish?
 
-We successfully implemented two bonus features:
+We successfully implemented three bonus features:
 
 **Local Storage persistence (3 pts).** When a game is in progress, the full game state — including the current board, the initial (given) cells, the solution, the elapsed timer is serialized to `localStorage` under the key `sudoku-game-state` after every move. On the next visit the state is rehydrated in the `GameProvider` initializer so the player resumes exactly where they left off. The save is cleared automatically when the player wins or explicitly resets the board. The relevant code lives in [`src/context/GameContext.jsx`](src/context/GameContext.jsx#L84) (initial load from storage, lines 84–105) and the `useEffect` that writes on every state change (lines 107–116).
 
 **Backtracking unique-solution guarantee (4 pts).** After generating a fully solved board, `createPuzzle` removes cells one at a time in a shuffled order. Before accepting each removal it calls [`countSolutions`](src/utils/sudoku.js#L82) ([src/utils/sudoku.js lines 82–98](src/utils/sudoku.js#L82)), a recursive backtracking function that traverses every empty cell and tries every value still valid for that position. The recursion short-circuits as soon as a second solution is found (`limit` parameter), so it never does more work than necessary. If removing a cell would allow more than one solution, the cell is restored and skipped. This guarantees that every puzzle we generate has exactly one valid solution.
+
+**Bonus Points: Hint System (5 pts).** Add a button to the page that says “Hint”.  When a user presses this button, the game highlight a single square (there may be multiple, but only choose one) that can accept a single, valid answer (ie, it should not break any placement rules AND there should be only one valid input.)  In the writeup, link to the code where you included this feature and describe your implementation details.
+

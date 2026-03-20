@@ -5,6 +5,7 @@ function SudokuBoard({
   config,
   disabled,
   getIsFixed,
+  getIsHint,
   getIsInvalid,
   selectedCell,
 }) {
@@ -20,6 +21,7 @@ function SudokuBoard({
             column={columnIndex}
             disabled={disabled}
             fixed={getIsFixed(rowIndex, columnIndex)}
+            isHint={getIsHint(rowIndex, columnIndex)}
             isInvalid={getIsInvalid(rowIndex, columnIndex)}
             isSelected={
               selectedCell?.row === rowIndex &&
