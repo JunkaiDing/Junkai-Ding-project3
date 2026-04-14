@@ -1,39 +1,109 @@
-# Sudoku Master Project
+# Sudoku Master — Fullstack Project
 
 ## Deliverables
 
-- **Render Link:** https://junkaiding.github.io/sudoku-project/
+- **Render Link:** (TBD)
 - **Collaborators:** Xihe Mu, Junkai Ding, Chengyu Liang
 - **Github Repo:** https://github.com/JunkaiDing/sudoku-project
-- **Video Walkthrough:** https://youtu.be/jPx4k90RLIQ
+- **Video Walkthrough:** (TBD)
+
+---
+
+## How to Run Locally
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Start MongoDB:**
+   ```bash
+   mongod --dbpath /usr/local/var/mongodb
+   ```
+
+3. **Start the backend server (terminal 1):**
+   ```bash
+   npm run server
+   ```
+
+4. **Start the frontend dev server (terminal 2):**
+   ```bash
+   npm run dev
+   ```
+
+5. Open `http://localhost:5173` in your browser.
+
+---
+
+## Tech Stack
+
+- **Frontend:** React 19, React Router DOM 7, Vite 8, Axios
+- **Backend:** Express 5, Mongoose, MongoDB
+- **Auth:** Cookie-based with bcrypt password hashing
+
+---
+
+## Pages
+
+| Route | Description |
+|-------|-------------|
+| `/` | Home page with title and navigation |
+| `/games` | Game selection — create Easy/Normal/Custom games, browse existing games |
+| `/game/:gameId` | Play a specific Sudoku game |
+| `/custom` | Create a custom 9x9 puzzle (bonus) |
+| `/rules` | Game rules and credits |
+| `/scores` | High score leaderboard (sorted by wins) |
+| `/login` | User login |
+| `/register` | User registration |
+
+---
+
+## RESTful APIs
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/user/isLoggedIn` | GET | Check if user is logged in via cookie |
+| `/api/user/login` | POST | Login with username/password, sets cookie |
+| `/api/user/register` | POST | Register new user, sets cookie |
+| `/api/logout` | POST | Clear authentication cookie |
+| `/api/sudoku` | GET | List all games |
+| `/api/sudoku` | POST | Create a new game (EASY or NORMAL) |
+| `/api/sudoku/custom` | POST | Create a custom game with unique-solution validation |
+| `/api/sudoku/:gameId` | GET | Get a specific game |
+| `/api/sudoku/:gameId` | PUT | Update a game's board/status |
+| `/api/sudoku/:gameId` | DELETE | Delete a game (creator only) |
+| `/api/highscore` | GET | Get sorted high score list |
+| `/api/highscore` | POST | Record a win for a game |
+| `/api/highscore/:gameId` | GET | Get high score for a specific game |
 
 ---
 
 ## Project Writeup
 
-### What were some challenges you faced while making this app? 
+### What were some challenges you faced while making this app?
 
-The most challenging part of this assignment was migrating our static HTML/CSS multi-page application into a React Single Page Application while maintaining the existing visual design and page structure. Managing the global game state using the Context API with `useReducer` required careful planning, particularly around immutability — every board update must produce a new array so React detects the change and re-renders correctly. The puzzle generation algorithm also presented a significant challenge: simply removing cells at random can produce puzzles with multiple valid solutions, so we had to implement a backtracking `countSolutions` function ([src/utils/sudoku.js](src/utils/sudoku.js#L82)) that verifies a puzzle has exactly one solution before accepting each removal, which added meaningful algorithmic complexity to the project.
+The biggest challenge was converting the client-side-only React SPA into a fullstack application. The original project generated puzzles entirely on the frontend using `createSolvedBoard` and `createPuzzle` in `src/utils/sudoku.js`. Moving this logic to the backend required splitting the utility file — puzzle generation and solving on the server side (`backend/utils/sudoku.js`), while keeping validation functions (`getInvalidCellKeys`, `getValidValues`) on the frontend for real-time user feedback without API round-trips.
+
+Implementing cookie-based authentication with Express and ensuring the Vite dev proxy correctly forwarded cookies was another challenge. We had to configure Axios with `withCredentials: true` and set up the Vite proxy to forward `/api` requests to the Express server on port 8000.
+
+The custom game feature required careful backend validation — we reused the backtracking `countSolutions` algorithm to verify that a user-submitted board has exactly one unique solution before accepting it.
 
 ### Given more time, what additional features, functional or design changes would you make?
 
-If we had more time, we would add a note taking function that lets players annotate cells with small candidate numbers. We would also introduce more difficulty levels. We would replace the mocked login/register pages and mock high-scores table with a real backend so that user accounts and puzzle-completion records actually persist across devices and sessions.
+We would add a note-taking feature for candidate numbers in cells. We would also add a timer leaderboard that tracks the fastest solve times per game, not just win counts. WebSocket-based real-time multiplayer — where two users race to solve the same puzzle — would be an exciting addition. We would also deploy to Render with MongoDB Atlas for a production environment.
 
 ### What assumptions did you make while working on this assignment?
 
-We assumed that "Easy" mode should use a smaller 6×6 grid (2×3 subgrids, values 1–6) to make the game more accessible for beginners, while "Normal" uses the standard 9×9 layout. For the authentication pages (Login and Register), we assumed a fully mocked UI was acceptable for this project phase and noted this explicitly in the UI, since no backend was in scope. We assumed when player enter a differnent game mode, he wanna play a new game and we will not save his old game.
+We assumed that "Easy" mode uses a 6x6 grid (2x3 subgrids) and "Normal" uses 9x9 (3x3 subgrids), consistent with Project 2. For the game list, we assumed any logged-in user can play any game, but only the game creator can delete it. For highscores, we track which users completed each game via a `completedBy` array on the Game model, and aggregate wins using a MongoDB aggregation pipeline. We assumed the solution should not be sent to the client while the game is in progress to prevent cheating.
 
 ### How long did this assignment take to complete?
 
-This assignment took approximately 15 hours across the three of us to complete.
+This assignment took approximately 20 hours across the three of us to complete.
 
 ### What bonus points did you accomplish?
 
-We successfully implemented three bonus features:
+**Password Encryption (2 pts).** User passwords are hashed with bcrypt (10 salt rounds) before storage in MongoDB. Login compares the plaintext input against the stored hash using `bcrypt.compare`. See [`backend/routes/user.js`](backend/routes/user.js) lines 33–36 (login) and lines 49–51 (register).
 
-**Local Storage persistence (3 pts).** When a game is in progress, the full game state — including the current board, the initial (given) cells, the solution, the elapsed timer is serialized to `localStorage` under the key `sudoku-game-state` after every move. On the next visit the state is rehydrated in the `GameProvider` initializer so the player resumes exactly where they left off. The save is cleared automatically when the player wins or explicitly resets the board. The relevant code lives in [`src/context/GameContext.jsx`](src/context/GameContext.jsx#L84) (initial load from storage, lines 84–105) and the `useEffect` that writes on every state change (lines 107–116).
+**Delete Game (5 pts).** When a logged-in user who created a game visits the game page or the games list, a "Delete" button is shown. Clicking it calls `DELETE /api/sudoku/:gameId`, which verifies the requester is the creator before removing the game. Since highscores are computed via MongoDB aggregation over the `completedBy` field of existing Game documents, deleting a game automatically removes its wins from the leaderboard. See [`backend/routes/sudoku.js`](backend/routes/sudoku.js) (DELETE route) and [`src/pages/GamesPage.jsx`](src/pages/GamesPage.jsx) (handleDelete).
 
-**Backtracking unique-solution guarantee (4 pts).** After generating a fully solved board, `createPuzzle` removes cells one at a time in a shuffled order. Before accepting each removal it calls [`countSolutions`](src/utils/sudoku.js#L82) ([src/utils/sudoku.js lines 82–98](src/utils/sudoku.js#L82)), a recursive backtracking function that traverses every empty cell and tries every value still valid for that position. The recursion short-circuits as soon as a second solution is found (`limit` parameter), so it never does more work than necessary. If removing a cell would allow more than one solution, the cell is restored and skipped. This guarantees that every puzzle we generate has exactly one valid solution.
-
-**Bonus Points: Hint System (5 pts).** Add a button to the page that says “Hint”.  When a user presses this button, the game highlight a single square (there may be multiple, but only choose one) that can accept a single, valid answer (ie, it should not break any placement rules AND there should be only one valid input.)  In the writeup, link to the code where you included this feature and describe your implementation details.
-
+**Custom Games (10 pts).** The `/custom` page presents an empty 9x9 board where users can place numbers to define a puzzle. On submit, the board is sent to `POST /api/sudoku/custom`, where the backend runs `countSolutions` (backtracking with early termination) to verify exactly one unique solution exists. If valid, the backend solves the board with `solvePuzzle`, saves it as a new Game document with difficulty "CUSTOM", and redirects the user to play. See [`src/pages/CustomGamePage.jsx`](src/pages/CustomGamePage.jsx) and [`backend/routes/sudoku.js`](backend/routes/sudoku.js) (POST /custom route).

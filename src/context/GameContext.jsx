@@ -8,29 +8,53 @@ import {
 } from "react";
 import {
   cloneBoard,
-  createGameState,
   getCellKey,
   getInvalidCellKeys,
   isBoardComplete,
 } from "../utils/sudoku";
-import { GAME_MODE_CONFIGS } from "../data/siteContent";
 
 const GameContext = createContext(null);
 
-const STORAGE_KEY = "sudoku-game-state";
-
 const ACTIONS = {
+  loadGame: "load-game",
   reset: "reset",
   selectCell: "select-cell",
   setCellValue: "set-cell-value",
-  startGame: "start-game",
   tick: "tick",
+};
+
+const INITIAL_STATE = {
+  gameId: null,
+  mode: null,
+  config: null,
+  initialBoard: [],
+  board: [],
+  invalidCellKeys: [],
+  selectedCell: null,
+  elapsedSeconds: 0,
+  status: "idle",
+  createdBy: null,
 };
 
 function reducer(state, action) {
   switch (action.type) {
-    case ACTIONS.startGame:
-      return createGameState(action.mode);
+    case ACTIONS.loadGame: {
+      const data = action.payload;
+      return {
+        gameId: data._id,
+        mode: data.difficulty?.toLowerCase(),
+        config: data.config,
+        initialBoard: data.initialBoard,
+        board: data.board,
+        invalidCellKeys: [
+          ...getInvalidCellKeys(data.board, data.config),
+        ],
+        selectedCell: null,
+        elapsedSeconds: 0,
+        status: data.status,
+        createdBy: data.createdBy,
+      };
+    }
     case ACTIONS.reset:
       return {
         ...state,
@@ -70,7 +94,6 @@ function reducer(state, action) {
       if (state.status !== "playing") {
         return state;
       }
-
       return {
         ...state,
         elapsedSeconds: state.elapsedSeconds + 1,
@@ -81,39 +104,7 @@ function reducer(state, action) {
 }
 
 export function GameProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, null, () => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return { ...parsed, selectedCell: null };
-      }
-    } catch {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-    return {
-      mode: "easy",
-      config: GAME_MODE_CONFIGS.easy,
-      solution: [],
-      initialBoard: [],
-      board: [],
-      invalidCellKeys: [],
-      selectedCell: null,
-      elapsedSeconds: 0,
-      status: "idle",
-    };
-  });
-
-  useEffect(() => {
-    if (state.status === "won") {
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-    if (state.status === "playing") {
-      const { selectedCell: _sel, ...stateToSave } = state;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-    }
-  }, [state]);
+  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
 
   useEffect(() => {
     if (state.status !== "playing") {
@@ -127,12 +118,11 @@ export function GameProvider({ children }) {
     return () => window.clearInterval(timerId);
   }, [state.status]);
 
-  const startGame = useCallback((mode) => {
-    dispatch({ type: ACTIONS.startGame, mode });
+  const loadGame = useCallback((gameData) => {
+    dispatch({ type: ACTIONS.loadGame, payload: gameData });
   }, []);
 
   const resetGame = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
     dispatch({ type: ACTIONS.reset });
   }, []);
 
@@ -153,15 +143,16 @@ export function GameProvider({ children }) {
   const value = useMemo(
     () => ({
       ...state,
-      getIsFixed: (row, column) => state.initialBoard[row][column] !== 0,
+      getIsFixed: (row, column) =>
+        state.initialBoard?.[row]?.[column] !== 0,
       getIsInvalid: (row, column) =>
         state.invalidCellKeys.includes(getCellKey(row, column)),
+      loadGame,
       resetGame,
       selectCell,
       setCellValue,
-      startGame,
     }),
-    [resetGame, selectCell, setCellValue, startGame, state],
+    [loadGame, resetGame, selectCell, setCellValue, state],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

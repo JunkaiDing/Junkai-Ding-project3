@@ -1,5 +1,6 @@
-import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import PageLayout from "./components/PageLayout";
+import CustomGamePage from "./pages/CustomGamePage";
 import GamePage from "./pages/GamePage";
 import GamesPage from "./pages/GamesPage";
 import HomePage from "./pages/HomePage";
@@ -10,13 +11,13 @@ import ScoresPage from "./pages/ScoresPage";
 
 function App() {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <PageLayout>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/games" element={<GamesPage />} />
-          <Route path="/games/easy" element={<GamePage mode="easy" />} />
-          <Route path="/games/normal" element={<GamePage mode="normal" />} />
+          <Route path="/game/:gameId" element={<GamePage />} />
+          <Route path="/custom" element={<CustomGamePage />} />
           <Route path="/rules" element={<RulesPage />} />
           <Route path="/scores" element={<ScoresPage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -24,7 +25,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </PageLayout>
-    </HashRouter>
+    </BrowserRouter>
   );
 }
 
