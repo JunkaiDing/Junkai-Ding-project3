@@ -6,7 +6,7 @@ This project extends a frontend-only Sudoku app into a complete web application 
 ## Project Links
 
 - Github Repo: https://github.com/JunkaiDing/sudoku-project
-- Video Walkthrough: https://youtu.be/4U8iNQYsOWY
+- Video Walkthrough: https://youtu.be/vRaebDXnRqw
 - Deployed App (Render): TBD
 - Collaborators: Xihe Mu, Junkai Ding, Chengyu Liang
 
